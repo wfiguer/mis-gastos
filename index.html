@@ -1,10 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mis-gastos</title>
+
+    <!-- viewport-fit=cover: el contenido llega hasta el notch en iPhone -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>Mis Gastos</title>
+
+    <!-- PWA: color de la barra del navegador en Android -->
+    <meta name="theme-color" content="#101714" />
+
+    <!-- iOS: activa el modo standalone (sin barra de Safari) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- iOS: barra de estado transparente — el fondo oscuro #101714 se ve a través -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- iOS: nombre bajo el ícono en la pantalla de inicio -->
+    <meta name="apple-mobile-web-app-title" content="Mis Gastos" />
+    <!-- iOS: ícono para "Añadir a pantalla de inicio" -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Eruda DevTools: solo carga cuando la URL tiene ?debug=1 -->
     <script>
       (function () {
         if (new URLSearchParams(location.search).get('debug') !== '1') return;
