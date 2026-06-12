@@ -1,44 +1,50 @@
-const claveMes = (mesISO) => `mov-${mesISO}`;
-const claveMesAntigua = (mesISO) => `movimientos:${mesISO}`;
+import { supabase } from "./lib/supabase";
 
-let indiceMesesCache = null;
+// Primer día del mes siguiente (para el filtro de fecha)
+const inicioMesSiguiente = (mesISO) => {
+  const [y, m] = mesISO.split("-").map(Number);
+  const d = new Date(y, m, 1); // new Date(año, mes_0_indexed + 1, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+};
 
-export function probarAlmacen() {
-  try {
-    localStorage.setItem("prueba-almacen", "ok");
-    const ok = localStorage.getItem("prueba-almacen") === "ok";
-    localStorage.removeItem("prueba-almacen");
-    return ok;
-  } catch {
-    return false;
-  }
+export async function cargarMes(mesISO) {
+  const { data, error } = await supabase
+    .from("movimientos")
+    .select("id, fecha, tipo, categoria, monto, nota")
+    .gte("fecha", `${mesISO}-01`)
+    .lt("fecha", inicioMesSiguiente(mesISO))
+    .order("fecha", { ascending: false });
+
+  if (error) throw error;
+  // Normaliza nota: Supabase puede devolver null si el campo estaba vacío
+  return (data ?? []).map((m) => ({ ...m, nota: m.nota ?? "" }));
 }
 
-export function cargarMes(mesISO) {
-  try {
-    const val = localStorage.getItem(claveMes(mesISO));
-    if (val) return JSON.parse(val);
-    // migración: intentar con clave anterior
-    const viejo = localStorage.getItem(claveMesAntigua(mesISO));
-    return viejo ? JSON.parse(viejo) : [];
-  } catch {
-    return [];
-  }
+// Inserta un movimiento nuevo. No enviamos id ni user_id: los genera la base de datos.
+export async function insertarMovimiento({ fecha, tipo, categoria, monto, nota }) {
+  const { error } = await supabase
+    .from("movimientos")
+    .insert({ fecha, tipo, categoria, monto, nota: nota || null });
+
+  if (error) throw error;
 }
 
-export function guardarMes(mesISO, items) {
-  localStorage.setItem(claveMes(mesISO), JSON.stringify(items));
-  try {
-    if (indiceMesesCache === null) {
-      const raw = localStorage.getItem("indice-meses");
-      indiceMesesCache = raw ? JSON.parse(raw) : [];
-    }
-    if (items.length > 0 && !indiceMesesCache.includes(mesISO)) {
-      indiceMesesCache.push(mesISO);
-      indiceMesesCache.sort();
-      localStorage.setItem("indice-meses", JSON.stringify(indiceMesesCache));
-    }
-  } catch {
-    // índice no crítico
-  }
+// Actualiza un movimiento existente por su UUID.
+export async function actualizarMovimiento(id, { fecha, tipo, categoria, monto, nota }) {
+  const { error } = await supabase
+    .from("movimientos")
+    .update({ fecha, tipo, categoria, monto, nota: nota || null })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+// Elimina un movimiento por su UUID.
+export async function eliminarMovimiento(id) {
+  const { error } = await supabase
+    .from("movimientos")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "./lib/supabase";
 import { COLORS } from "./constants";
 import { hoyISO, mesActual, mesDeFecha, labelCategoria } from "./utils";
-import { cargarMes, guardarMes, probarAlmacen } from "./storage";
+import { cargarMes, insertarMovimiento, actualizarMovimiento, eliminarMovimiento } from "./storage";
 import Header from "./components/Header";
 import FormRegistrar from "./components/FormRegistrar";
 import Resumen from "./components/Resumen";
@@ -16,27 +17,30 @@ export default function GastosApp() {
   const [mes, setMes] = useState(mesActual());
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
   const [toast, setToast] = useState(null);
   const [errorDetalle, setErrorDetalle] = useState(null);
-  const [almacenDisponible, setAlmacenDisponible] = useState(null);
 
-  useEffect(() => {
-    setAlmacenDisponible(probarAlmacen());
-  }, []);
-
+  // Formulario
   const [monto, setMonto] = useState("");
   const [tipo, setTipo] = useState("gasto");
   const [categoria, setCategoria] = useState(null);
   const [fecha, setFecha] = useState(hoyISO());
   const [nota, setNota] = useState("");
   const [editandoId, setEditandoId] = useState(null);
-  const [editandoMes, setEditandoMes] = useState(null);
   const [csvVisible, setCsvVisible] = useState(null);
 
-  const refrescar = useCallback((m) => {
+  // Carga los movimientos del mes desde Supabase
+  const refrescar = useCallback(async (m) => {
     setCargando(true);
-    setItems(cargarMes(m));
-    setCargando(false);
+    try {
+      const data = await cargarMes(m);
+      setItems(data);
+    } catch (e) {
+      setErrorDetalle(e.message ?? "Error cargando movimientos. Verificá tu conexión.");
+    } finally {
+      setCargando(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -54,65 +58,46 @@ export default function GastosApp() {
     setNota("");
     setFecha(hoyISO());
     setEditandoId(null);
-    setEditandoMes(null);
   };
 
-  const guardarMovimiento = () => {
+  // ---------- Guardar movimiento ----------
+  const guardarMovimiento = async () => {
     const valor = parseInt(monto || "0", 10);
     if (!valor) { avisar("Ingresa un monto"); return; }
     if (!categoria) { avisar("Elige una categoría"); return; }
 
-    const mov = {
-      id: editandoId || `${Date.now()}-${Math.floor(Math.random() * 9999)}`,
-      fecha,
-      tipo,
-      categoria,
-      monto: valor,
-      nota: nota.trim(),
-    };
+    setGuardando(true);
+    const campos = { fecha, tipo, categoria, monto: valor, nota: nota.trim() };
 
-    const mesDestino = mesDeFecha(fecha);
-    const lista = mesDestino === mes ? [...items] : cargarMes(mesDestino);
-    const sinAnterior = lista.filter((x) => x.id !== mov.id);
-    sinAnterior.push(mov);
-    sinAnterior.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-    if (mesDestino === mes) setItems(sinAnterior);
-
-    if (almacenDisponible !== false) {
-      try {
-        if (editandoId && editandoMes && editandoMes !== mesDestino) {
-          const origen = cargarMes(editandoMes);
-          guardarMes(editandoMes, origen.filter((x) => x.id !== editandoId));
-        }
-        guardarMes(mesDestino, sinAnterior);
-        avisar(editandoId ? "Movimiento actualizado ✓" : "Guardado ✓");
-      } catch (e) {
-        setAlmacenDisponible(false);
-        setErrorDetalle(String(e && e.message ? e.message : e));
-        avisar("Guardado solo en esta sesión ⚠️");
+    try {
+      if (editandoId) {
+        await actualizarMovimiento(editandoId, campos);
+        avisar("Movimiento actualizado ✓");
+      } else {
+        await insertarMovimiento(campos);
+        avisar("Guardado ✓");
       }
-    } else {
-      avisar("Guardado solo en esta sesión ⚠️");
-    }
-    limpiarFormulario();
-  };
-
-  const eliminar = (id) => {
-    const nuevos = items.filter((x) => x.id !== id);
-    setItems(nuevos);
-    if (almacenDisponible !== false) {
-      try {
-        guardarMes(mes, nuevos);
-        avisar("Eliminado");
-      } catch (e) {
-        setAlmacenDisponible(false);
-        avisar("Eliminado solo en esta sesión ⚠️");
-      }
-    } else {
-      avisar("Eliminado solo en esta sesión ⚠️");
+      limpiarFormulario();
+      await refrescar(mes);
+    } catch (e) {
+      setErrorDetalle(e.message ?? "No se pudo guardar. Verificá tu conexión.");
+    } finally {
+      setGuardando(false);
     }
   };
 
+  // ---------- Eliminar ----------
+  const eliminar = async (id) => {
+    try {
+      await eliminarMovimiento(id);
+      await refrescar(mes);
+      avisar("Eliminado");
+    } catch (e) {
+      setErrorDetalle(e.message ?? "No se pudo eliminar. Verificá tu conexión.");
+    }
+  };
+
+  // ---------- Editar ----------
   const editar = (mov) => {
     setMonto(String(mov.monto));
     setTipo(mov.tipo);
@@ -120,10 +105,10 @@ export default function GastosApp() {
     setFecha(mov.fecha);
     setNota(mov.nota || "");
     setEditandoId(mov.id);
-    setEditandoMes(mesDeFecha(mov.fecha));
     setTab("registrar");
   };
 
+  // ---------- Exportar CSV ----------
   const exportarCSV = () => {
     if (items.length === 0) { avisar("No hay movimientos este mes"); return; }
     const filas = [["fecha", "tipo", "categoria", "monto", "nota"]];
@@ -142,6 +127,7 @@ export default function GastosApp() {
     }
   };
 
+  // ---------- Teclado numérico ----------
   const tecla = (t) => {
     if (t === "borrar") { setMonto((m) => m.slice(0, -1)); return; }
     if (monto.length >= 10) return;
@@ -149,6 +135,13 @@ export default function GastosApp() {
     setMonto((m) => (m === "0" ? t : m + t));
   };
 
+  // ---------- Cerrar sesión ----------
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    // App.jsx detecta el cambio de sesión y muestra AuthScreen automáticamente
+  };
+
+  // ---------- Cálculos resumen ----------
   const totalIngresos = items.filter((x) => x.tipo === "ingreso").reduce((s, x) => s + x.monto, 0);
   const totalGastos = items.filter((x) => x.tipo === "gasto").reduce((s, x) => s + x.monto, 0);
   const balance = totalIngresos - totalGastos;
@@ -163,31 +156,21 @@ export default function GastosApp() {
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Space Grotesk', system-ui, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" }}>
-      <Header tab={tab} mes={mes} setMes={setMes} />
-
-      {almacenDisponible === false && (
-        <div style={{ margin: "0 20px 4px", background: "#3A2A1A", border: `1px solid ${COLORS.expense}`, borderRadius: 10, padding: "8px 12px", fontSize: 12, color: COLORS.text, lineHeight: 1.4 }}>
-          ⚠️ El almacenamiento permanente no responde. Puedes registrar, pero los datos solo durarán esta sesión. <strong>Exporta a CSV antes de cerrar</strong> para no perderlos.
-        </div>
-      )}
+      <Header tab={tab} mes={mes} setMes={setMes} onSignOut={cerrarSesion} />
 
       <main style={{ flex: 1, padding: "8px 20px 90px", overflowY: "auto" }}>
         {tab === "registrar" && (
           <FormRegistrar
             editandoId={editandoId}
             limpiarFormulario={limpiarFormulario}
-            tipo={tipo}
-            setTipo={setTipo}
-            setCategoria={setCategoria}
-            setMonto={setMonto}
-            monto={monto}
-            categoria={categoria}
-            fecha={fecha}
-            setFecha={setFecha}
-            nota={nota}
-            setNota={setNota}
+            tipo={tipo} setTipo={setTipo}
+            setCategoria={setCategoria} setMonto={setMonto}
+            monto={monto} categoria={categoria}
+            fecha={fecha} setFecha={setFecha}
+            nota={nota} setNota={setNota}
             guardarMovimiento={guardarMovimiento}
             tecla={tecla}
+            guardando={guardando}
           />
         )}
         {tab === "resumen" && (

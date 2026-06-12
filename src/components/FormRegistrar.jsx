@@ -7,7 +7,7 @@ export default function FormRegistrar({
   editandoId, limpiarFormulario,
   tipo, setTipo, setCategoria, setMonto,
   monto, categoria, fecha, setFecha,
-  nota, setNota, guardarMovimiento, tecla,
+  nota, setNota, guardarMovimiento, tecla, guardando,
 }) {
   const categoriasActivas = tipo === "ingreso" ? CATEGORIAS_INGRESO : CATEGORIAS_GASTO;
 
@@ -79,9 +79,9 @@ export default function FormRegistrar({
           style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, color: COLORS.text, borderRadius: 12, padding: "10px 12px", fontSize: 14 }} />
       </div>
 
-      <button onClick={guardarMovimiento}
-        style={{ width: "100%", background: COLORS.gold, color: COLORS.goldDark, border: "none", borderRadius: 14, padding: "15px 0", fontSize: 17, fontWeight: 700, cursor: "pointer" }}>
-        {editandoId ? "Actualizar movimiento" : "Guardar movimiento"}
+      <button onClick={guardarMovimiento} disabled={guardando}
+        style={{ width: "100%", background: COLORS.gold, color: COLORS.goldDark, border: "none", borderRadius: 14, padding: "15px 0", fontSize: 17, fontWeight: 700, cursor: guardando ? "not-allowed" : "pointer", opacity: guardando ? 0.7 : 1 }}>
+        {guardando ? "Guardando…" : editandoId ? "Actualizar movimiento" : "Guardar movimiento"}
       </button>
     </div>
   );
