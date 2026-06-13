@@ -13,6 +13,7 @@ export const COLORS = {
 
 export const CATEGORIAS_GASTO = [
   { id: "mercado", label: "Mercado", icon: "🛒" },
+  { id: "restaurante", label: "Restaurante", icon: "🍽️" },
   { id: "transporte", label: "Transporte", icon: "⛽" },
   { id: "ninos", label: "Niños", icon: "👶" },
   { id: "vehiculos", label: "Vehículos", icon: "🔧" },

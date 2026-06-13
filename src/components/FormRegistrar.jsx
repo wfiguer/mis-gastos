@@ -63,7 +63,7 @@ export default function FormRegistrar({
       </div>
 
       <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 6 }}>Categoría</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${categoriasActivas.length % 3 === 0 ? 3 : 4}, 1fr)`, gap: 8, marginBottom: 14 }}>
         {categoriasActivas.map((c) => (
           <button key={c.id} onClick={() => setCategoria(c.id)} style={btnCat(categoria === c.id)}>
             <span style={{ fontSize: 20 }}>{c.icon}</span>
