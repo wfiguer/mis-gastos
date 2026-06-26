@@ -8,7 +8,7 @@ const TABS = [
   ["historial", "📜", "Historial"],
 ];
 
-export default function NavBar({ tab, setTab, onSignOut }) {
+export default function NavBar({ tab, setTab, onSignOut, onConfig }) {
   const [confirmar, setConfirmar] = useState(false);
 
   const handleSalir = () => setConfirmar(true);
@@ -16,7 +16,7 @@ export default function NavBar({ tab, setTab, onSignOut }) {
   const handleConfirmar = () => { setConfirmar(false); onSignOut(); };
 
   return (
-    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, zIndex: 40 }}>
+    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, zIndex: 40, paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div style={{ display: "flex" }}>
         {TABS.map(([t, icon, lbl]) => (
           <button key={t} onClick={() => setTab(t)}
@@ -27,26 +27,32 @@ export default function NavBar({ tab, setTab, onSignOut }) {
         ))}
       </div>
 
-      <div style={{ borderTop: `1px solid ${COLORS.border}`, padding: "7px 20px", display: "flex", alignItems: "center", justifyContent: confirmar ? "space-between" : "flex-end" }}>
+      <div style={{ borderTop: `1px solid ${COLORS.border}`, padding: "7px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         {confirmar ? (
           <>
             <span style={{ fontSize: 13, color: COLORS.textDim }}>¿Confirmar salida?</span>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={handleCancelar}
-                style={{ background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textDim, borderRadius: 8, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                style={{ background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textDim, borderRadius: 8, padding: "8px 16px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                 Cancelar
               </button>
               <button onClick={handleConfirmar}
-                style={{ background: "none", border: `1px solid ${COLORS.expense}`, color: COLORS.expense, borderRadius: 8, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                style={{ background: "none", border: `1px solid ${COLORS.expense}`, color: COLORS.expense, borderRadius: 8, padding: "8px 16px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                 Salir
               </button>
             </div>
           </>
         ) : (
-          <button onClick={handleSalir}
-            style={{ background: "none", border: "none", color: COLORS.textDim, fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: "2px 0" }}>
-            Salir →
-          </button>
+          <>
+            <button onClick={onConfig}
+              style={{ background: "none", border: "none", color: COLORS.textDim, fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: "10px 16px" }}>
+              ⚙ Configuración
+            </button>
+            <button onClick={handleSalir}
+              style={{ background: "none", border: "none", color: COLORS.textDim, fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: "10px 16px" }}>
+              Salir →
+            </button>
+          </>
         )}
       </div>
     </nav>
