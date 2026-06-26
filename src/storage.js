@@ -39,6 +39,18 @@ export async function actualizarMovimiento(id, { fecha, tipo, categoria, monto, 
   if (error) throw error;
 }
 
+// Trae todos los movimientos históricos (fecha, tipo, monto) para el resumen anual.
+// Una sola query; el frontend agrupa por mes.
+export async function cargarHistorial() {
+  const { data, error } = await supabase
+    .from("movimientos")
+    .select("fecha, tipo, monto")
+    .order("fecha", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 // Elimina un movimiento por su UUID.
 export async function eliminarMovimiento(id) {
   const { error } = await supabase

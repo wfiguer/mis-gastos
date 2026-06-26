@@ -38,3 +38,9 @@ export const labelCategoria = (tipo, catId) => {
   const c = lista.find((x) => x.id === catId);
   return c ? c.label : catId;
 };
+
+export const calcularTotales = (items) => {
+  const totalIngresos = items.filter((x) => x.tipo === "ingreso").reduce((s, x) => s + x.monto, 0);
+  const totalGastos = items.filter((x) => x.tipo === "gasto").reduce((s, x) => s + x.monto, 0);
+  return { totalIngresos, totalGastos, balance: totalIngresos - totalGastos };
+};
