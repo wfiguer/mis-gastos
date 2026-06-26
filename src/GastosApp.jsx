@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./lib/supabase";
 import { COLORS } from "./constants";
-import { hoyISO, mesActual, mesDeFecha, labelCategoria } from "./utils";
-import { cargarMes, insertarMovimiento, actualizarMovimiento, eliminarMovimiento } from "./storage";
+import { hoyISO, mesActual, mesDeFecha, labelCategoria, calcularTotales } from "./utils";
+import { cargarMes, cargarHistorial, insertarMovimiento, actualizarMovimiento, eliminarMovimiento } from "./storage";
 import Header from "./components/Header";
 import FormRegistrar from "./components/FormRegistrar";
 import Resumen from "./components/Resumen";
+import ResumenAnual from "./components/ResumenAnual";
 import Historial from "./components/Historial";
 import NavBar from "./components/NavBar";
 import Toast from "./components/Toast";
@@ -29,6 +30,8 @@ export default function GastosApp() {
   const [nota, setNota] = useState("");
   const [editandoId, setEditandoId] = useState(null);
   const [csvVisible, setCsvVisible] = useState(null);
+  const [historialAnual, setHistorialAnual] = useState([]);
+  const [cargandoAnual, setCargandoAnual] = useState(false);
 
   // Carga los movimientos del mes desde Supabase
   const refrescar = useCallback(async (m) => {
@@ -46,6 +49,15 @@ export default function GastosApp() {
   useEffect(() => {
     refrescar(mes);
   }, [mes, refrescar]);
+
+  useEffect(() => {
+    if (tab !== "resumen-anual") return;
+    setCargandoAnual(true);
+    cargarHistorial()
+      .then(setHistorialAnual)
+      .catch((e) => setErrorDetalle(e.message ?? "Error cargando historial."))
+      .finally(() => setCargandoAnual(false));
+  }, [tab]);
 
   const avisar = (msg) => {
     setToast(msg);
@@ -135,6 +147,14 @@ export default function GastosApp() {
     setMonto((m) => (m === "0" ? t : m + t));
   };
 
+  // ---------- Cambiar tab ----------
+  const cambiarTab = (nuevaTab) => {
+    if (nuevaTab === "resumen" || nuevaTab === "historial") {
+      setMes(mesActual());
+    }
+    setTab(nuevaTab);
+  };
+
   // ---------- Cerrar sesión ----------
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
@@ -142,9 +162,7 @@ export default function GastosApp() {
   };
 
   // ---------- Cálculos resumen ----------
-  const totalIngresos = items.filter((x) => x.tipo === "ingreso").reduce((s, x) => s + x.monto, 0);
-  const totalGastos = items.filter((x) => x.tipo === "gasto").reduce((s, x) => s + x.monto, 0);
-  const balance = totalIngresos - totalGastos;
+  const { totalIngresos, totalGastos, balance } = calcularTotales(items);
 
   const porCategoria = (tipoFiltro) => {
     const mapa = {};
@@ -156,9 +174,9 @@ export default function GastosApp() {
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Space Grotesk', system-ui, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" }}>
-      <Header tab={tab} mes={mes} setMes={setMes} onSignOut={cerrarSesion} />
+      <Header tab={tab} mes={mes} setMes={setMes} />
 
-      <main style={{ flex: 1, padding: "8px 20px 90px", overflowY: "auto" }}>
+      <main style={{ flex: 1, padding: "8px 20px 120px", overflowY: "auto" }}>
         {tab === "registrar" && (
           <FormRegistrar
             editandoId={editandoId}
@@ -183,6 +201,12 @@ export default function GastosApp() {
             exportarCSV={exportarCSV}
           />
         )}
+        {tab === "resumen-anual" && (
+          <ResumenAnual
+            cargando={cargandoAnual}
+            historial={historialAnual}
+          />
+        )}
         {tab === "historial" && (
           <Historial
             cargando={cargando}
@@ -197,7 +221,7 @@ export default function GastosApp() {
       <Toast toast={toast} />
       <ModalCSV csvVisible={csvVisible} setCsvVisible={setCsvVisible} mes={mes} copiarCSV={copiarCSV} />
       <ModalError errorDetalle={errorDetalle} setErrorDetalle={setErrorDetalle} />
-      <NavBar tab={tab} setTab={setTab} />
+      <NavBar tab={tab} setTab={cambiarTab} onSignOut={cerrarSesion} />
     </div>
   );
 }
