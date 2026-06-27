@@ -12,6 +12,7 @@ import NavBar from "./components/NavBar";
 import Toast from "./components/Toast";
 import ModalCSV from "./components/ModalCSV";
 import ModalError from "./components/ModalError";
+import ModalConfiguracion from "./components/ModalConfiguracion";
 
 export default function GastosApp() {
   const [tab, setTab] = useState("registrar");
@@ -30,6 +31,7 @@ export default function GastosApp() {
   const [nota, setNota] = useState("");
   const [editandoId, setEditandoId] = useState(null);
   const [csvVisible, setCsvVisible] = useState(null);
+  const [configVisible, setConfigVisible] = useState(false);
   const [historialAnual, setHistorialAnual] = useState([]);
   const [cargandoAnual, setCargandoAnual] = useState(false);
 
@@ -176,7 +178,7 @@ export default function GastosApp() {
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Space Grotesk', system-ui, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" }}>
       <Header tab={tab} mes={mes} setMes={setMes} />
 
-      <main style={{ flex: 1, padding: "8px 20px 120px", overflowY: "auto" }}>
+      <main style={{ flex: 1, padding: "8px 24px calc(130px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
         {tab === "registrar" && (
           <FormRegistrar
             editandoId={editandoId}
@@ -221,7 +223,8 @@ export default function GastosApp() {
       <Toast toast={toast} />
       <ModalCSV csvVisible={csvVisible} setCsvVisible={setCsvVisible} mes={mes} copiarCSV={copiarCSV} />
       <ModalError errorDetalle={errorDetalle} setErrorDetalle={setErrorDetalle} />
-      <NavBar tab={tab} setTab={cambiarTab} onSignOut={cerrarSesion} />
+      <ModalConfiguracion visible={configVisible} onClose={() => setConfigVisible(false)} />
+      <NavBar tab={tab} setTab={cambiarTab} onSignOut={cerrarSesion} onConfig={() => setConfigVisible(true)} />
     </div>
   );
 }
